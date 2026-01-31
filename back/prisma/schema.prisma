@@ -2,6 +2,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,6 +10,44 @@ generator client {
 model Board {
   id        String   @id
   name      String
+
+  columns   Column[]
+  cards     Card[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Column {
+  id        String   @id
+  boardId   String
+  name      String
+  position  Int
+
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards     Card[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boardId, position])
+}
+
+model Card {
+  id          String   @id
+  title       String
+  description String?
+
+  boardId     String
+  columnId    String
+  position    Int
+
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  column      Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([columnId, position])
+  @@index([boardId])
 }
