@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button, Card, Form, Input, Modal, Space, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import type { ColumnWithCards, CreateCardInput } from "../../types/kanban.types";
 import { KanbanCard } from "../card/card";
+
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 const { Text } = Typography;
 
@@ -23,6 +26,13 @@ export function KanbanColumn({ column, allColumns, createCard, onChanged }: Prop
   const [isCreating, setIsCreating] = useState(false);
   const [form] = Form.useForm<CreateCardForm>();
 
+  const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards]);
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${column.id}`, 
+    data: { columnId: column.id },
+  });
+
   return (
     <>
       <Card
@@ -40,14 +50,27 @@ export function KanbanColumn({ column, allColumns, createCard, onChanged }: Prop
             Adicionar
           </Button>
         }
-        style={{ width: 320, borderRadius: 12, flex: "0 0 auto" }}
+        style={{
+          width: 320,
+          borderRadius: 12,
+          flex: "0 0 auto",
+          outline: isOver ? "2px solid rgba(24,144,255,0.6)" : "none", 
+          outlineOffset: 2,
+        }}
         styles={{ body: { padding: 12 } }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {column.cards.map((card) => (
-            <KanbanCard key={card.id} card={card} columns={allColumns} onChanged={onChanged} />
-          ))}
-        </div>
+        <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
+          <div ref={setNodeRef} style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 20 }}>
+            {column.cards.map((card) => (
+              <KanbanCard
+                key={card.id}
+                card={card}
+                columns={allColumns}
+                onChanged={onChanged}
+              />
+            ))}
+          </div>
+        </SortableContext>
       </Card>
 
       <Modal
@@ -63,8 +86,18 @@ export function KanbanColumn({ column, allColumns, createCard, onChanged }: Prop
         onOk={async () => {
           const values = await form.validateFields();
           setIsCreating(true);
+
           try {
-            await createCard({ columnId: column.id, title: values.title, description: values.description });
+            const nextPosition =
+              (column.cards.reduce((max, c) => Math.max(max, c.position ?? 0), 0) || 0) + 1;
+
+            await createCard({
+              columnId: column.id,
+              title: values.title,
+              description: values.description,
+              position: nextPosition,
+            });
+
             await onChanged?.();
             setIsModalOpen(false);
             form.resetFields();
@@ -74,11 +107,7 @@ export function KanbanColumn({ column, allColumns, createCard, onChanged }: Prop
         }}
       >
         <Form layout="vertical" form={form}>
-          <Form.Item
-            label="Título"
-            name="title"
-            rules={[{ required: true, message: "Informe o título" }]}
-          >
+          <Form.Item label="Título" name="title" rules={[{ required: true, message: "Informe o título" }]}>
             <Input placeholder="Ex: Ajustar endpoint /cards/move" maxLength={80} />
           </Form.Item>
 

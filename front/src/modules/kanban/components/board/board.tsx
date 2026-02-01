@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Layout, Select, Space, Spin, Typography, Modal, Form, Input } from "antd";
+import { Button, Layout, Select, Space, Spin, Typography, Modal, Form, Input, Card as AntCard } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useBoards } from "../../hooks/useBoards";
 import { useCards } from "../../hooks/useCards";
@@ -8,8 +8,21 @@ import { KanbanColumn } from "../column/column";
 import { ErrorMessage } from "../../../../shared/components/ErrorMessage";
 import { AddColumnCard } from "../column/addColumn";
 
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragCancelEvent,
+  DragOverlay,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+
 const { Header, Content } = Layout;
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 type CreateBoardForm = { name: string };
 type CreateColumnForm = { name: string };
@@ -18,7 +31,8 @@ export function KanbanBoard() {
   const { boards, loadingBoards, boardsError, fetchBoards, addBoard } = useBoards({ autoFetch: true });
 
   const [selectedBoardId, setSelectedBoardId] = useState<ID | null>(null);
-  const { columns, loadingCards, cardsError, fetchColumns, createColumn, createCard } = useCards(selectedBoardId);
+  const { columns, loadingCards, cardsError, fetchColumns, createColumn, createCard, moveCard } =
+    useCards(selectedBoardId);
 
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
@@ -27,6 +41,17 @@ export function KanbanBoard() {
   const [isCreateColumnOpen, setIsCreateColumnOpen] = useState(false);
   const [isCreatingColumn, setIsCreatingColumn] = useState(false);
   const [columnForm] = Form.useForm<CreateColumnForm>();
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    })
+  );
+
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   useEffect(() => {
     if (boards.length && !selectedBoardId) setSelectedBoardId(boards[0].id as ID);
@@ -52,6 +77,89 @@ export function KanbanBoard() {
     }
     await fetchBoards();
   };
+
+  const findColumnByCardId = (cardId: string) => {
+    for (const col of columns) {
+      if (col.cards?.some((c) => c.id === cardId)) return col;
+    }
+    return null;
+  };
+
+  const findCardById = (cardId: string) => {
+    for (const col of columns) {
+      const found = col.cards?.find((c) => c.id === cardId);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const getCardIndexInColumn = (columnId: string, cardId: string) => {
+    const col = columns.find((c) => c.id === columnId);
+    if (!col) return -1;
+    return (col.cards ?? []).findIndex((c) => c.id === cardId);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    document.body.style.cursor = "grabbing";
+    setActiveCardId(String(event.active.id));
+  };
+
+  const handleDragCancel = (_event: DragCancelEvent) => {
+    document.body.style.cursor = "";
+    setActiveCardId(null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    document.body.style.cursor = "";
+    setActiveCardId(null);
+
+    if (!over) return;
+
+    const activeCardIdLocal = String(active.id);
+    const overId = String(over.id);
+
+    const fromColumn = findColumnByCardId(activeCardIdLocal);
+    if (!fromColumn) return;
+
+    let toColumnId: string | null = null;
+
+    if (overId.startsWith("column-")) {
+      toColumnId = overId.replace("column-", "");
+    } else {
+      const overColumn = findColumnByCardId(overId);
+      toColumnId = overColumn?.id ?? null;
+    }
+
+    if (!toColumnId) return;
+
+    let toPosition = 0;
+
+    if (overId.startsWith("column-")) {
+      const destCol = columns.find((c) => c.id === toColumnId);
+      toPosition = (destCol?.cards?.length ?? 0);
+    } else {
+      const idx = getCardIndexInColumn(toColumnId, overId);
+      toPosition = idx >= 0 ? idx : 0;
+    }
+
+    if (fromColumn.id === toColumnId) {
+      const fromIndex = getCardIndexInColumn(fromColumn.id, activeCardIdLocal);
+      if (fromIndex === toPosition) return;
+    }
+
+    try {
+      await moveCard({ cardId: activeCardIdLocal, toColumnId, position: toPosition });
+
+      setTimeout(() => {
+        fetchColumns();
+      }, 120);
+    } catch {
+      await fetchColumns();
+    }
+  };
+
+  const overlayCard = activeCardId ? findCardById(activeCardId) : null;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -101,28 +209,63 @@ export function KanbanBoard() {
           </div>
         ) : (
           <Spin spinning={isLoadingBoardData}>
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                overflowX: "auto",
-                paddingBottom: 8,
-              }}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragCancel={handleDragCancel}
+              onDragEnd={handleDragEnd}
             >
-              <AddColumnCard onClick={() => setIsCreateColumnOpen(true)} />
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  overflowX: "auto",
+                  paddingBottom: 8,
+                  alignItems: "flex-start",
+                }}
+              >
+                <AddColumnCard onClick={() => setIsCreateColumnOpen(true)} />
 
-              {columns.map((col: KanbanColumnType) => (
-                <KanbanColumn
-                  key={col.id}
-                  column={col}
-                  allColumns={columns}
-                  createCard={createCard}
-                  onChanged={async () => {
-                    await fetchColumns();
-                  }}
-                />
-              ))}
-            </div>
+                {columns.map((col: KanbanColumnType) => (
+                  <KanbanColumn
+                    key={col.id}
+                    column={col}
+                    allColumns={columns}
+                    createCard={createCard}
+                    onChanged={async () => {
+                      await fetchColumns();
+                    }}
+                  />
+                ))}
+              </div>
+
+              <DragOverlay
+                dropAnimation={{
+                  duration: 220,
+                  easing: "cubic-bezier(0.2, 0, 0, 1)",
+                }}
+              >
+                {overlayCard ? (
+                  <div style={{ width: 320 }}>
+                    <AntCard size="small" styles={{ body: { padding: 12 } }}>
+                      <Text strong ellipsis>
+                        {overlayCard.title}
+                      </Text>
+                      {overlayCard.description ? (
+                        <Paragraph style={{ marginBottom: 0, marginTop: 8 }} ellipsis={{ rows: 3 }}>
+                          {overlayCard.description}
+                        </Paragraph>
+                      ) : (
+                        <Text type="secondary" style={{ display: "block", marginTop: 8 }}>
+                          Sem descrição
+                        </Text>
+                      )}
+                    </AntCard>
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           </Spin>
         )}
       </Content>

@@ -4,6 +4,9 @@ import { DeleteOutlined, SwapOutlined, MoreOutlined } from "@ant-design/icons";
 import type { CardItem, ColumnWithCards, ID } from "../../types/kanban.types";
 import { useCards } from "../../hooks/useCards";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 const { Text, Paragraph } = Typography;
 
 type Props = {
@@ -17,6 +20,32 @@ export function KanbanCard({ card, columns, onChanged }: Props) {
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [toColumnId, setToColumnId] = useState<ID | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: card.id,
+    data: {
+      type: "card",
+      cardId: card.id,
+      columnId: card.columnId,
+    },
+  });
+
+  const dndStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging
+      ? "transform 120ms ease" 
+      : "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
+    opacity: isDragging ? 0.7 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+    willChange: "transform"
+  };
 
   const moveOptions = useMemo(
     () =>
@@ -64,30 +93,51 @@ export function KanbanCard({ card, columns, onChanged }: Props) {
 
   return (
     <>
-      <Card
-        size="small"
-        style={{ marginBottom: 8 }}
-        styles={{ body: { padding: 12 } }}
-        title={<Text strong ellipsis>{card.title}</Text>}
-        extra={
-          <Dropdown
-            menu={{ items: actionsMenu as any }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <Button size="small" type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        }
-        loading={isDeleting}
-      >
-        {card.description ? (
-          <Paragraph style={{ marginBottom: 0 }} ellipsis={{ rows: 3 }}>
-            {card.description}
-          </Paragraph>
-        ) : (
-          <Text type="secondary">Sem descrição</Text>
-        )}
-      </Card>
+      <div ref={setNodeRef} style={dndStyle}>
+        <Card
+          size="small"
+          style={{
+            marginBottom: 8,
+            boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.12)" : undefined,
+          }}
+          styles={{ body: { padding: 12 } }}
+          title={
+            <div
+              {...attributes}
+              {...listeners}
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <Text strong ellipsis style={{ flex: 1 }}>
+                {card.title}
+              </Text>
+            </div>
+          }
+          extra={
+            <Dropdown
+              menu={{ items: actionsMenu as any }}
+              trigger={["click"]}
+              placement="bottomRight"
+            >
+              <Button
+                size="small"
+                type="text"
+                icon={<MoreOutlined />}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+            </Dropdown>
+          }
+          loading={isDeleting}
+        >
+          {card.description ? (
+            <Paragraph style={{ marginBottom: 0 }} ellipsis={{ rows: 3 }}>
+              {card.description}
+            </Paragraph>
+          ) : (
+            <Text type="secondary">Sem descrição</Text>
+          )}
+        </Card>
+      </div>
 
       <Modal
         open={isMoveOpen}
