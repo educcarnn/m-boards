@@ -20,10 +20,10 @@ export class ColumnsService {
     return column.toJSON();
   }
 
-  async listByBoard(boardId: string) {
-    const columns = await this.repo.findManyByBoard(boardId);
-    return columns.map((c) => c.toJSON());
-  }
+    async listByBoard(boardId: string) {
+      const columns = await this.repo.findManyWithCardsByBoard(boardId);
+      return columns;
+    }
 
   async rename(columnId: string, name: string) {
     const column = await this.repo.findById(columnId);

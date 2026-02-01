@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "src/shared/prisma.service";
 import { Card } from "./card.entity";
+import { ColumnWithCardsDto } from "./dto/column-with-cards.dto";
 
 export abstract class CardsRepository {
   abstract findById(id: string): Promise<Card | null>;

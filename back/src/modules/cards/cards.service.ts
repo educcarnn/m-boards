@@ -48,18 +48,37 @@ export class CardsService {
     const card = await this.repo.findById(cardId);
     if (!card) throw new NotFoundException("Card not found");
 
-    const destCards = await this.repo.findManyByColumn(dto.toColumnId);
+    const fromColumnId = card.columnId;
+    const toColumnId = dto.toColumnId;
 
-    const filtered = destCards.filter((c) => c.id !== cardId);
+    const [sourceCards, destCards] = await Promise.all([
+      this.repo.findManyByColumn(fromColumnId),
+      fromColumnId === toColumnId ? Promise.resolve([] as Card[]) : this.repo.findManyByColumn(toColumnId),
+    ]);
 
-    card.moveTo({ toColumnId: dto.toColumnId, toPosition: dto.toPosition });
+    const sourceFiltered = sourceCards.filter((c) => c.id !== cardId);
 
-    const index = Math.max(0, Math.min(dto.toPosition, filtered.length));
-    filtered.splice(index, 0, card);
+    const destBase = fromColumnId === toColumnId
+      ? sourceFiltered
+      : destCards.filter((c) => c.id !== cardId);
 
-    filtered.forEach((c, i) => c.moveTo({ toColumnId: c.columnId, toPosition: i }));
+    card.moveTo({ toColumnId, toPosition: dto.toPosition });
 
-    await this.repo.updateMany(filtered);
+    const index = Math.max(0, Math.min(dto.toPosition, destBase.length));
+    destBase.splice(index, 0, card);
+
+    const reindex = (list: Card[], colId: string) => {
+      list.forEach((c, i) => c.moveTo({ toColumnId: colId, toPosition: i }));
+    };
+
+    if (fromColumnId === toColumnId) {
+      reindex(destBase, toColumnId);
+      await this.repo.updateMany(destBase);
+    } else {
+      reindex(sourceFiltered, fromColumnId);
+      reindex(destBase, toColumnId);
+      await this.repo.updateMany([...sourceFiltered, ...destBase]);
+    }
 
     return card.toJSON();
   }
