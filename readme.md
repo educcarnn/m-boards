@@ -1,12 +1,11 @@
 ---
 
-## 🚀 Como Executar Localmente Front
+### Passos:
+## 🚀 Como Executar Localmente (Front-end)
 
 ### Pré-requisitos:
 - Node.js (recomendado: 18+ ou 20+)
 - npm (ou yarn/pnpm)
-
-### Passos:
 
 ```bash
 # 1. Clonar o repositório
