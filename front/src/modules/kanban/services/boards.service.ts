@@ -1,5 +1,5 @@
 import { http } from "../../../shared/api/axios";
-import type { ID } from "../types/kanban.types";
+import type { ID } from "../types/board.types";
 
 export type Board = {
   id: string;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ID } from "../types/kanban.types";
+import type { ID } from "../types/board.types";
 import type { Board } from "../services/boards.service";
 import { listBoards, getBoard, createBoard } from "../services/boards.service";
 

@@ -1,19 +1,5 @@
 export type ID = string;
 
-export type Board = {
-  id: ID;
-  name: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type Column = {
-  id: ID;
-  boardId: ID;
-  name: string;
-  position?: number;
-};
-
 export type CardItem = {
   id: ID;
   columnId: ID;
@@ -42,8 +28,11 @@ export type MoveCardInput = {
   position?: number;
 };
 
-export type KanbanBoard = Board & {
-  columns: ColumnWithCards[];
+export type Column = {
+  id: ID;
+  boardId: ID;
+  name: string;
+  position?: number;
 };
 
 export type KanbanColumn = ColumnWithCards;

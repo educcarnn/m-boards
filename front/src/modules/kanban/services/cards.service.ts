@@ -1,11 +1,8 @@
 import { http } from "../../../shared/api/axios";
 import type {
-  ColumnWithCards,
-  CreateCardInput,
-  CardItem,
-  MoveCardInput,
   ID,
-} from "../types/kanban.types";
+} from "../types/board.types";
+import { ColumnWithCards, CreateCardInput, MoveCardInput, CardItem } from "../types/card.type";
 
 
 export async function listColumnsByBoard(boardId: ID): Promise<ColumnWithCards[]> {

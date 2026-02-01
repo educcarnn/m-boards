@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import type {
   ColumnWithCards,
-  CreateCardInput,
-  MoveCardInput,
   ID,
-} from "../types/kanban.types";
+} from "../types/board.types";
 import { create, remove, move } from "../services/cards.service";
 import { listColumnsByBoard, createColumn as createColumnService } from "../services/columns.service";
+import { CreateCardInput, MoveCardInput } from "../types/card.type";
 
 type State = {
   columns: ColumnWithCards[];

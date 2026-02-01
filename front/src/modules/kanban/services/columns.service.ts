@@ -1,5 +1,5 @@
 import { http } from "../../../shared/api/axios";
-import type { ID, ColumnWithCards } from "../types/kanban.types";
+import type { ID, ColumnWithCards } from "../types/board.types";
 
 export type CreateColumnInput = {
   boardId: ID;
@@ -28,4 +28,12 @@ export async function listColumnsByBoard(boardId: ID): Promise<ColumnWithCards[]
     position: col.position,
     cards: Array.isArray(col.cards) ? col.cards : [],
   }));
+}
+
+export async function renameColumn(columnId: string, name: string) {
+  return http.patch(`/columns/${columnId}/rename`, { name });
+}
+
+export async function deleteColumn(columnId: string) {
+  return http.delete(`/columns/${columnId}`);
 }

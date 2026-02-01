@@ -3,10 +3,11 @@ import { Button, Layout, Select, Space, Spin, Typography, Modal, Form, Input, Ca
 import { PlusOutlined } from "@ant-design/icons";
 import { useBoards } from "../../hooks/useBoards";
 import { useCards } from "../../hooks/useCards";
-import type { Board, KanbanColumn as KanbanColumnType, ID } from "../../types/kanban.types";
+import type { Board, KanbanColumn as KanbanColumnType, ID } from "../../types/board.types";
 import { KanbanColumn } from "../column/column";
 import { ErrorMessage } from "../../../../shared/components/ErrorMessage";
 import { AddColumnCard } from "../column/addColumn";
+import { deleteColumn, renameColumn } from "../../services/columns.service";
 
 import {
   DndContext,
@@ -230,9 +231,11 @@ export function KanbanBoard() {
                 {columns.map((col: KanbanColumnType) => (
                   <KanbanColumn
                     key={col.id}
-                    column={col}
-                    allColumns={columns}
+                    column={col as any}
+                    allColumns={columns as any}
                     createCard={createCard}
+                    renameColumn={renameColumn}
+                    deleteColumn={deleteColumn}
                     onChanged={async () => {
                       await fetchColumns();
                     }}

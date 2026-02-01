@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { Board, ColumnWithCards, ID } from "../types/kanban.types";
 import { listBoards } from "../services/boards.service";
+import type { Board, ID } from "../types/board.types";
 import { listColumnsByBoard } from "../services/cards.service";
+import { ColumnWithCards } from "../types/card.type";
 
 type BoardContextValue = {
   boards: Board[];

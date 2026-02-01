@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Button, Card, Dropdown, Modal, Select, Space, Typography } from "antd";
 import { DeleteOutlined, SwapOutlined, MoreOutlined } from "@ant-design/icons";
-import type { CardItem, ColumnWithCards, ID } from "../../types/kanban.types";
+import type { ColumnWithCards, ID } from "../../types/board.types";
+import { CardItem } from "../../types/card.type";
 import { useCards } from "../../hooks/useCards";
 
 import { useSortable } from "@dnd-kit/sortable";
